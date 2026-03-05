@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Universo Interactivo</title>
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="universe"></canvas> <!-- creamos el lienzo canvas donde JavaScript puede dibujar -->
+
+<script>
+const canvas = document.getElementById("universe"); // la variable canvas contiene nuestro lienzo canvas llamado universe
+const ctx = canvas.getContext("2d"); //indicamos que nuestro canvas que será en 2d y guardamos el contexto en la variable ctx 
+
+/*esto hace que el canvas tenga el tamaño de la ventana, para ocupar toda la pagina*/
+canvas.width = window.innerWidth; 
+canvas.height = window.innerHeight;
+
+const stars = []; //aquí creamos el array de estrellas vacio 
+const numStars = 200; //aquí definimos el numero de estrellas que queremos
+let shootingStar = null; //estrellas fugaces
+const planets = []; //planetas
+const nebulas = []; //nebulosas
+const numNebulas = 3; //aquí definimos el numero de nebulosas que queremos
+const galaxies = []; //galaxias
+
+// Crear estrellas aleatorias con profundidad (parallax)
+for (let i = 0; i < numStars; i++) {
+
+  const depth = Math.random();
+
+  stars.push({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    prevX: 0,
+    prevY: 0,
+
+    depth: depth,
+
+    radius: (Math.random() * 1.5 + 0.5) * (0.5 + depth * 1.5),
+    speed: Math.random() * 0.8 + 0.2,
+
+    color: ["white", "#aaddff", "#fff2a6"][Math.floor(Math.random()*3)]
+  });
+
+}
+
+// Crear nebulosas
+for (let i = 0; i < numNebulas; i++) {
+
+  const side = Math.floor(Math.random() * 4);
+
+  let x, y;
+
+  if (side === 0) { 
+    // izquierda
+    x = -200;
+    y = Math.random() * canvas.height;
+  } 
+  else if (side === 1) { 
+    // derecha
+    x = canvas.width + 200;
+    y = Math.random() * canvas.height;
+  } 
+  else if (side === 2) { 
+    // arriba
+    x = Math.random() * canvas.width;
+    y = -200;
+  } 
+  else { 
+    // abajo
+    x = Math.random() * canvas.width;
+    y = canvas.height + 200;
+  }
+
+  nebulas.push({
+    x: x,
+    y: y,
+    radius: 600 + Math.random() * 800,
+    depth: Math.random() * 0.3 + 0.1, // profundidad muy baja (lejos)
+    color: [
+      "rgba(120,120,255,0.15)",
+      "rgba(255,120,180,0.15)",
+      "rgba(120,255,200,0.15)"
+    ][Math.floor(Math.random()*3)]
+  });
+
+}
+
+// Crear estrellas fugaces
+function createShootingStar() {
+
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  shootingStar = {
+    x: centerX + (Math.random() - 0.5) * 80,
+    y: centerY + (Math.random() - 0.5) * 80,
+    speed: 2 + Math.random() * 2,
+    width: 0.5 + Math.random() * 1,
+    tailLength: 30 + Math.random() * 40
+  };
+
+}
+
+// Crear planetas
+function createPlanet() {
+
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  const planet = {
+    x: centerX + (Math.random() - 0.5) * 100,
+    y: centerY + (Math.random() - 0.5) * 100,
+    radius: 10 + Math.random() * 20,
+    growth: 0.07,
+    color: [
+      "#6fa8dc",
+      "#f6b26b",
+      "#c27ba0",
+      "#3d3d3d",
+      "#8e7cc3"
+    ][Math.floor(Math.random()*5)],
+    rings: Math.random() < 0.3,
+    ringAngle: (Math.random() - 0.5) * 1.2,
+    ringCount: 1 + Math.floor(Math.random() * 2)
+  };
+
+  // ajuste para planetas volcánicos
+  if (planet.color === "#3d3d3d") {
+    planet.growth *= 0.9;
+  }
+
+  planets.push(planet);
+}
+
+// Crear galaxias
+function createGalaxy() {
+
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  galaxies.push({
+    x: centerX + (Math.random() - 0.5) * canvas.width,
+    y: centerY + (Math.random() - 0.5) * canvas.height,
+    radius: 80 + Math.random() * 120,
+    rotation: Math.random() * Math.PI,
+    arms: 3 + Math.floor(Math.random() * 2),
+    stars: 200,
+    type: Math.floor(Math.random() * 2)
+  });
+
+}
+
+function animate() { //funcion para animar el universo, se ejecuta continuamente
+  /* estas dos lineas limpian la pantalla pintando un rectangulo negro que cubre todo el canvas borrando el frame anterior*/
+  //ctx.fillStyle = "black";
+  ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "white";
+
+  if (!shootingStar && Math.random() < 0.01) {
+    createShootingStar();
+  }
+
+  if (planets.length < 3 && Math.random() < 0.01) {
+    createPlanet();
+  }
+
+  if (galaxies.length < 2 && Math.random() < 0.002) {
+    createGalaxy();
+  }
+
+  galaxies.forEach(galaxy => {
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    // movimiento muy lento (más lejos que nebulosas)
+    galaxy.x += (galaxy.x - centerX) * 0.0001;
+    galaxy.y += (galaxy.y - centerY) * 0.0001;
+
+    ctx.save();
+    ctx.translate(galaxy.x, galaxy.y);
+    ctx.rotate(galaxy.rotation);
+
+    for (let i = 0; i < galaxy.stars; i++) {
+
+      let x, y;
+
+      const angle = Math.random() * Math.PI * 2;
+      const distance = Math.random() * galaxy.radius;
+
+      if (galaxy.type === 0) {
+        // espiral
+        const spiral = distance * 0.3;
+        x = Math.cos(angle + spiral) * distance;
+        y = Math.sin(angle + spiral) * distance;
+      }
+
+      else if (galaxy.type === 1) {
+        // elíptica
+        x = Math.cos(angle) * distance * 1.6;
+        y = Math.sin(angle) * distance * 0.6;
+      }
+
+      ctx.beginPath();
+      ctx.arc(x, y, Math.random() * 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,255,0.4)";
+      ctx.fill();
+    }
+
+    ctx.restore();
+
+  });  
+
+  nebulas.forEach(nebula => {
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    nebula.x += (nebula.x - centerX) * 0.0005 * nebula.depth;
+    nebula.y += (nebula.y - centerY) * 0.0005 * nebula.depth;
+
+    const gradient = ctx.createRadialGradient(
+      nebula.x,
+      nebula.y,
+      0,
+      nebula.x,
+      nebula.y,
+      nebula.radius
+    );
+
+    gradient.addColorStop(0, nebula.color);
+    gradient.addColorStop(1, "rgba(0,0,0,0)");
+
+    ctx.beginPath();
+    ctx.arc(nebula.x, nebula.y, nebula.radius, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+  });
+
+  stars.forEach(star => { //recorremos todas las estrellas del array
+    star.prevX = star.x;
+    star.prevY = star.y;
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    const parallax = 0.3 + star.depth * 1.2;
+
+    star.x += (star.x - centerX) * star.speed * 0.01 * parallax;
+    star.y += (star.y - centerY) * star.speed * 0.01 * parallax;
+
+    if (
+    star.x < 0 ||
+    star.x > canvas.width ||
+    star.y < 0 ||
+    star.y > canvas.height
+    ) {
+
+    star.x = Math.random() * canvas.width;
+    star.y = Math.random() * canvas.height;
+
+    star.prevX = star.x;
+    star.prevY = star.y;
+
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(star.prevX, star.prevY);
+    ctx.lineTo(star.x, star.y);
+    //ctx.strokeStyle = "white";
+    ctx.strokeStyle = star.color;
+    ctx.lineWidth = star.radius;
+    ctx.stroke();
+  });
+
+  if (shootingStar) {
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    shootingStar.x += (shootingStar.x - centerX) * shootingStar.speed * 0.01;
+    shootingStar.y += (shootingStar.y - centerY) * shootingStar.speed * 0.01;
+
+    const tailX = shootingStar.x - (shootingStar.x - centerX) * shootingStar.tailLength * 0.01;
+    const tailY = shootingStar.y - (shootingStar.y - centerY) * shootingStar.tailLength * 0.01;
+    const headSize = 2 + shootingStar.speed * 0.5;
+
+    ctx.beginPath();
+    ctx.moveTo(shootingStar.x, shootingStar.y);
+    ctx.lineTo(tailX, tailY);
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = shootingStar.width;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(shootingStar.x, shootingStar.y, headSize, 0, Math.PI * 2);
+    ctx.fillStyle = "white";
+    ctx.fill();
+    
+
+    if (
+      shootingStar.x < -100 ||
+      shootingStar.x > canvas.width + 100 ||
+      shootingStar.y < -100 ||
+      shootingStar.y > canvas.height + 100
+    ) {
+      shootingStar = null;
+    }
+
+  }
+
+  planets.sort((a, b) => a.radius - b.radius);
+  for (let i = planets.length - 1; i >= 0; i--) {
+
+    const planet = planets[i];
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    planet.x += (planet.x - centerX) * 0.01;
+    planet.y += (planet.y - centerY) * 0.01;
+
+    planet.radius += planet.growth;
+
+    const ringGradient = ctx.createLinearGradient(
+      planet.x - planet.radius * 2,
+      planet.y,
+      planet.x + planet.radius * 2,
+      planet.y
+    );
+
+    ringGradient.addColorStop(0, "rgba(180,180,180,0.2)");
+    ringGradient.addColorStop(0.5, "rgba(220,220,220,0.8)");
+    ringGradient.addColorStop(1, "rgba(180,180,180,0.2)");
+
+    // ANILLOS PARTE TRASERA
+    if (planet.rings) {
+
+      ctx.save();
+      ctx.translate(planet.x, planet.y);
+      ctx.rotate(planet.ringAngle);
+
+      for (let i = 0; i < planet.ringCount; i++) {
+
+        const scale = 1.8 + i * 0.4;
+
+        ctx.beginPath();
+        ctx.ellipse(
+          0,
+          0,
+          planet.radius * scale,
+          planet.radius * (0.6 + i * 0.1),
+          0,
+          Math.PI,
+          0
+        );
+
+        ctx.strokeStyle = ringGradient;
+        ctx.lineWidth = planet.radius * 0.12;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    // PLANETA
+    const planetGradient = ctx.createRadialGradient(
+      planet.x - planet.radius * 0.4,
+      planet.y - planet.radius * 0.4,
+      planet.radius * 0.1,
+      planet.x,
+      planet.y,
+      planet.radius
+    );
+
+    //planetGradient.addColorStop(0, "rgba(255,255,255,0.35)");
+    planetGradient.addColorStop(0, planet.color);
+    planetGradient.addColorStop(0.3, planet.color);
+    planetGradient.addColorStop(1, "rgba(0,0,0,0.85)");
+
+    ctx.beginPath();
+    ctx.arc(planet.x, planet.y, planet.radius, 0, Math.PI * 2);
+    ctx.fillStyle = planetGradient;
+    ctx.fill();
+
+    //TEXTURA ROCOSA (MANCHAS)
+    if (planet.color === "#f6b26b") {
+
+      for (let j = 0; j < 30; j++) {
+
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * planet.radius * 0.8;
+
+        const x = planet.x + Math.cos(angle) * dist;
+        const y = planet.y + Math.sin(angle) * dist;
+
+        ctx.beginPath();
+        ctx.arc(x, y, Math.random() * (planet.radius * 0.1), 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(0,0,0,0.2)";
+        ctx.fill();
+
+      }
+
+    }
+    //TEXTURA HELADA/OCEANICA (VETAS)
+    if (planet.color === "#6fa8dc" || planet.color === "#8e7cc3") {
+
+      ctx.strokeStyle = "rgba(255,255,255,0.2)";
+
+      for (let j = 0; j < 10; j++) {
+
+        const angle = Math.random() * Math.PI * 2;
+
+        ctx.beginPath();
+        ctx.moveTo(
+          planet.x,
+          planet.y
+        );
+
+        ctx.lineTo(
+          planet.x + Math.cos(angle) * planet.radius,
+          planet.y + Math.sin(angle) * planet.radius
+        );
+
+        ctx.lineWidth = planet.radius * 0.03;
+        ctx.stroke();
+
+      }
+
+    }  
+  
+    // ANILLOS PARTE DELANTERA
+    if (planet.rings) {
+
+      ctx.save();
+      ctx.translate(planet.x, planet.y);
+      ctx.rotate(planet.ringAngle);
+
+      for (let i = 0; i < planet.ringCount; i++) {
+
+        const scale = 1.8 + i * 0.4;
+
+        ctx.beginPath();
+        ctx.ellipse(
+          0,
+          0,
+          planet.radius * scale,
+          planet.radius * (0.6 + i * 0.1),
+          0,
+          0,
+          Math.PI
+        );
+
+        ctx.strokeStyle = ringGradient;
+        ctx.lineWidth = planet.radius * 0.12;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    if (
+      planet.x < -200 ||
+      planet.x > canvas.width + 200 ||
+      planet.y < -200 ||
+      planet.y > canvas.height + 200
+    ) {
+      planets.splice(i, 1);
+    }
+    
+
+  }
+
+  requestAnimationFrame(animate); //le indica al navegador que ejecute la funcion animate en cada frame
+}
+
+animate(); //esto incia el proceso, es decir, el universo
+</script>
+
+</body>
+</html>
